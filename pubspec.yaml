@@ -1,0 +1,46 @@
+name: purchase_request_app_shell
+description: "Flutter Android WebView shell for a hosted purchase request site."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  connectivity_plus: ^7.1.1
+  file_picker: ^11.0.2
+  permission_handler: ^12.0.3
+  url_launcher: ^6.3.2
+  webview_flutter: ^4.13.1
+  webview_flutter_android: ^4.10.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_launcher_icons: ^0.14.4
+  flutter_lints: ^5.0.0
+  flutter_native_splash: ^2.4.7
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/app_icon.png
+    - assets/splash/splash_logo.png
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/splash/splash_logo.png
+  android: true
+  ios: false
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/icon/app_icon.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/icon/app_icon.png

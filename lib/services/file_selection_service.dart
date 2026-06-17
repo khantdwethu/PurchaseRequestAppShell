@@ -1,27 +1,26 @@
-import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../config/app_config.dart';
 
 class FileSelectionService {
+  static const MethodChannel _channel = MethodChannel(
+    'purchase_request_app_shell/file_selector',
+  );
+
   const FileSelectionService();
 
   Future<List<String>> pickFiles(FileSelectorParams params) async {
-    final FilePickerResult? result = await FilePicker.pickFiles(
-      allowMultiple: params.mode == FileSelectorMode.openMultiple,
-      allowedExtensions: AppConfig.uploadAllowedExtensions,
-      type: FileType.custom,
-      withData: false,
-    );
+    final List<Object?>? result = await _channel
+        .invokeListMethod<Object?>('pickFiles', <String, Object?>{
+          'allowMultiple': params.mode == FileSelectorMode.openMultiple,
+          'allowedExtensions': AppConfig.uploadAllowedExtensions,
+        });
 
-    if (result == null) {
-      return <String>[];
-    }
-
-    return result.files
-        .map((PlatformFile file) => file.path)
-        .whereType<String>()
-        .map((String path) => Uri.file(path).toString())
-        .toList(growable: false);
+    return result
+            ?.whereType<String>()
+            .where((String value) => value.isNotEmpty)
+            .toList(growable: false) ??
+        const <String>[];
   }
 }

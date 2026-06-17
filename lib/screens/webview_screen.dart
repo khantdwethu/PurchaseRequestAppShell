@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -30,7 +31,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   late final DownloadService _downloadService = DownloadService(
     _externalUrlService,
   );
-  late final WebViewController _controller;
+  WebViewController? _controller;
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   DateTime? _lastBackPress;
@@ -53,24 +54,26 @@ class _WebViewScreenState extends State<WebViewScreen> {
   void initState() {
     super.initState();
 
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.white)
-      ..enableZoom(false)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: _handleNavigationRequest,
-          onPageStarted: _handlePageStarted,
-          onPageFinished: _handlePageFinished,
-          onProgress: _handleProgress,
-          onWebResourceError: _handleWebResourceError,
-          onHttpError: _handleHttpError,
-          onSslAuthError: _handleSslError,
-        ),
-      );
+    if (_supportsEmbeddedWebView) {
+      _controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(Colors.white)
+        ..enableZoom(false)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onNavigationRequest: _handleNavigationRequest,
+            onPageStarted: _handlePageStarted,
+            onPageFinished: _handlePageFinished,
+            onProgress: _handleProgress,
+            onWebResourceError: _handleWebResourceError,
+            onHttpError: _handleHttpError,
+            onSslAuthError: _handleSslError,
+          ),
+        );
 
-    unawaited(_configurePlatformWebView());
-    unawaited(_loadInitialPage());
+      unawaited(_configurePlatformWebView());
+      unawaited(_loadInitialPage());
+    }
 
     _connectivitySubscription = _connectivityService.onConnectivityChanged
         .listen(_handleConnectivityChanged);
@@ -83,9 +86,14 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 
   Future<void> _configurePlatformWebView() async {
-    if (_controller.platform is AndroidWebViewController) {
+    final WebViewController? controller = _controller;
+    if (controller == null) {
+      return;
+    }
+
+    if (controller.platform is AndroidWebViewController) {
       final AndroidWebViewController androidController =
-          _controller.platform as AndroidWebViewController;
+          controller.platform as AndroidWebViewController;
 
       await androidController.setMediaPlaybackRequiresUserGesture(false);
       await androidController.setOnShowFileSelector(
@@ -110,6 +118,11 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 
   Future<void> _loadWebsite() async {
+    final WebViewController? controller = _controller;
+    if (controller == null) {
+      return;
+    }
+
     setState(() {
       _isOffline = false;
       _hasPageError = false;
@@ -121,7 +134,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     });
 
     try {
-      await _controller.loadRequest(AppConfig.websiteUri);
+      await controller.loadRequest(AppConfig.websiteUri);
     } catch (_) {
       if (!mounted) {
         return;
@@ -132,6 +145,11 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 
   Future<void> _retryLoad() async {
+    final WebViewController? controller = _controller;
+    if (controller == null) {
+      return;
+    }
+
     if (_isRetrying) {
       return;
     }
@@ -162,12 +180,12 @@ class _WebViewScreenState extends State<WebViewScreen> {
     });
 
     try {
-      final String? currentUrl = await _controller.currentUrl();
+      final String? currentUrl = await controller.currentUrl();
 
       if (currentUrl == null || currentUrl.isEmpty) {
-        await _controller.loadRequest(AppConfig.websiteUri);
+        await controller.loadRequest(AppConfig.websiteUri);
       } else {
-        await _controller.reload();
+        await controller.reload();
       }
     } catch (_) {
       if (mounted) {
@@ -305,8 +323,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 
   Future<void> _handleBackPressed() async {
-    if (await _controller.canGoBack()) {
-      await _controller.goBack();
+    final WebViewController? controller = _controller;
+    if (controller == null) {
+      return;
+    }
+
+    if (await controller.canGoBack()) {
+      await controller.goBack();
       return;
     }
 
@@ -413,7 +436,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     setState(() {
       _isPullRefreshing = true;
     });
-    unawaited(_controller.reload());
+    unawaited(_controller?.reload());
   }
 
   void _handlePointerEnd(PointerEvent event) {
@@ -422,8 +445,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 
   Future<double> _readWebScrollOffset() async {
+    final WebViewController? controller = _controller;
+    if (controller == null) {
+      return 0;
+    }
+
     try {
-      final Object result = await _controller.runJavaScriptReturningResult(
+      final Object result = await controller.runJavaScriptReturningResult(
         'Math.max(window.scrollY || 0, document.documentElement.scrollTop || 0).toString()',
       );
       return double.tryParse(result.toString().replaceAll('"', '')) ?? 0;
@@ -434,7 +462,12 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_supportsEmbeddedWebView) {
+      return _buildWebFallback(context);
+    }
+
     final bool showError = _isOffline || _hasPageError;
+    final WebViewController? controller = _controller;
 
     return PopScope(
       canPop: false,
@@ -454,7 +487,9 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   onPointerMove: _handlePointerMove,
                   onPointerUp: _handlePointerEnd,
                   onPointerCancel: _handlePointerEnd,
-                  child: WebViewWidget(controller: _controller),
+                  child: controller == null
+                      ? const SizedBox.shrink()
+                      : WebViewWidget(controller: controller),
                 ),
               if (showError)
                 ErrorView(
@@ -498,6 +533,55 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   ),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool get _supportsEmbeddedWebView => !kIsWeb;
+
+  Widget _buildWebFallback(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(
+                    Icons.open_in_browser_rounded,
+                    size: 56,
+                    color: Color(0xFF145C9E),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'This app shell is designed for Android WebView.',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'When running on Chrome, open the hosted site directly in the browser instead of embedding it with webview_flutter.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: () {
+                      unawaited(
+                        _externalUrlService.launchExternal(AppConfig.websiteUri),
+                      );
+                    },
+                    icon: const Icon(Icons.launch_rounded),
+                    label: const Text('Open Website'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

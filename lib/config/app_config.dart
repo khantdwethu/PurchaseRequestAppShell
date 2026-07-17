@@ -2,9 +2,13 @@ class AppConfig {
   const AppConfig._();
 
   static const String appName = 'Purchase Request';
-  static const String websiteUrl = 'https://naytunlinn.github.io/PurchaseRequest/';
+  // static const String websiteUrl = 'https://naytunlinn.github.io/PurchaseRequest/';
+  // static const String privacyPolicyUrl =
+  //     'https://naytunlinn.github.io/PurchaseRequest/';
+
+  static const String websiteUrl = 'http://192.168.1.39';
   static const String privacyPolicyUrl =
-      'https://naytunlinn.github.io/PurchaseRequest/';
+      'http://192.168.1.27';
 
   static const int primaryColorValue = 0xFF145C9E;
 

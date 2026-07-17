@@ -12,7 +12,13 @@ class ExternalUrlService {
       return true;
     }
 
-    if (scheme != 'https') {
+    final String configuredScheme = AppConfig.websiteUri.scheme.toLowerCase();
+    final Set<String> allowedSchemes = <String>{
+      if (configuredScheme.isNotEmpty) configuredScheme,
+      'https',
+    };
+
+    if (!allowedSchemes.contains(scheme)) {
       return false;
     }
 

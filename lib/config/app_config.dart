@@ -1,7 +1,7 @@
 class AppConfig {
   const AppConfig._();
 
-  static const String appName = 'Purchase Request';
+  static const String appName = 'Sathapana Go';
   // static const String websiteUrl = 'https://naytunlinn.github.io/PurchaseRequest/';
   // static const String privacyPolicyUrl =
   //     'https://naytunlinn.github.io/PurchaseRequest/';

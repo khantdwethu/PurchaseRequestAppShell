@@ -8,12 +8,10 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../config/app_config.dart';
-import '../screens/pdf_viewer_screen.dart';
 import '../services/connectivity_service.dart';
 import '../services/download_service.dart';
 import '../services/external_url_service.dart';
 import '../services/file_selection_service.dart';
-import '../utils/url_helper.dart';
 import '../widgets/error_view.dart';
 import '../widgets/loading_progress_bar.dart';
 
@@ -211,11 +209,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
       return NavigationDecision.prevent;
     }
 
-    if (UrlHelper.isPdfUrl(request.url)) {
-      unawaited(_openPdf(request.url));
-      return NavigationDecision.prevent;
-    }
-
     if (!request.isMainFrame) {
       return NavigationDecision.navigate;
     }
@@ -400,18 +393,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
     if (!didLaunch && mounted) {
       _showSnackBar('Unable to start the download.');
     }
-  }
-
-  Future<void> _openPdf(String pdfUrl) async {
-    if (!mounted) {
-      return;
-    }
-
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) => PdfViewerScreen(pdfUrl: pdfUrl),
-      ),
-    );
   }
 
   void _showSnackBar(String message) {

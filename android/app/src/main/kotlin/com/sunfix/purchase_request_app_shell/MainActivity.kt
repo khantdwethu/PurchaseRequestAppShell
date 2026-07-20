@@ -1,4 +1,4 @@
-package com.sunfix.purchase_request_app_shell
+package com.sunfix.sathapanago
 
 import android.app.Activity
 import android.content.Intent
